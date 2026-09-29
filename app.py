@@ -46,11 +46,11 @@ def explode_ratings(df: pd.DataFrame) -> pd.DataFrame:
 
 def genre_movie_counts(movies: pd.DataFrame) -> pd.DataFrame:
     exploded = explode_movies(movies)
-    n_movies = movies["movie_id"].nunique()
+    n_movies = movies["title"].nunique()
     out = (
-        exploded.groupby("genre", as_index=False)["movie_id"]
+        exploded.groupby("genre", as_index=False)["title"]
         .nunique()
-        .rename(columns={"movie_id": "n_movies"})
+        .rename(columns={"title": "n_movies"})
         .sort_values("n_movies", ascending=False)
     )
     out["pct_movies"] = 100.0 * out["n_movies"] / n_movies
@@ -62,7 +62,7 @@ def genre_means(df: pd.DataFrame, movie_counts: pd.DataFrame) -> pd.DataFrame:
     stats = exploded.groupby("genre", as_index=False).agg(
         mean_rating=("rating", "mean"),
         n_ratings=("rating", "size"),
-        n_movies=("movie_id", "nunique"),
+        n_movies=("title", "nunique"),
     )
     median_movies = float(movie_counts["n_movies"].median())
     keep = set(movie_counts.loc[movie_counts["n_movies"] >= median_movies, "genre"])
@@ -71,21 +71,21 @@ def genre_means(df: pd.DataFrame, movie_counts: pd.DataFrame) -> pd.DataFrame:
 
 
 def decade_means(df: pd.DataFrame) -> pd.DataFrame:
-    timed = df.dropna(subset=["year"]).copy()
-    timed["decade"] = (timed["year"].astype(float) // 10 * 10).astype(int)
+    timed = df.dropna(subset=["decade"]).copy()
+    timed["decade"] = timed["decade"].astype(int)
     return (
         timed.groupby("decade", as_index=False)
         .agg(
             mean_rating=("rating", "mean"),
             n_ratings=("rating", "size"),
-            n_movies=("movie_id", "nunique"),
+            n_movies=("title", "nunique"),
         )
         .sort_values("decade")
     )
 
 
 def movie_scores(df: pd.DataFrame) -> pd.DataFrame:
-    stats = df.groupby(["movie_id", "title"], as_index=False).agg(
+    stats = df.groupby("title", as_index=False).agg(
         n=("rating", "size"),
         mean=("rating", "mean"),
     )
@@ -113,7 +113,7 @@ counts, n_movies = genre_movie_counts(movies)
 all_genres = counts["genre"].tolist()
 
 st.title("Movie ratings")
-st.caption("MovieLens 100K ratings joined to titles, release years, and genres.")
+st.caption("MovieLens ratings joined to titles, release years, and genres.")
 
 with st.expander("How genres are counted (read this before the charts)", expanded=True):
     st.markdown(
@@ -122,12 +122,10 @@ A movie can have several genres (`Comedy|Drama`). Before any genre count or aver
 
 1. Split on `|` and **count the movie in every tag** (not as one combined label).
 2. Empty / `unknown` tags are kept as **Unknown**.
-3. A movie is one `movie_id` (same title, different IDs stay separate).
-4. **Q1 percents** are share of unique movies, so they **sum to more than 100%**.
-5. **Q2 / Q3 means** are the mean of all ratings in the group (popular films weigh more).
-6. **Q2** drops genres whose movie count is below the **median** movie count across genres.
-7. **Q3** uses **release decade**, not the year the rating was given; rows with missing year are dropped.
-8. **Q4** ranks by `n × mean rating` among movies with at least the floor you set (50 or 150 in the assignment).
+3. **Q1 percents** are share of unique movies, so they **sum to more than 100%**.
+4. **Q2** drops genres whose movie count is below the **median** movie count across genres.
+5. **Q3** uses **release decade** from the dataset directly.
+6. **Q4** ranks by `n × mean rating` among movies with at least the floor you set.
         """
     )
 
@@ -168,7 +166,7 @@ c4.metric("Avg genre tags per movie", f"{counts['n_movies'].sum() / n_movies:.2f
 
 st.subheader("Q1 — Genre breakdown")
 st.caption(
-    "Horizontal bars, sorted by movie count — not a pie. "
+    "Horizontal bars, sorted by movie count. "
     "Percents are share of unique movies and will not add to 100%."
 )
 st.altair_chart(
@@ -208,8 +206,7 @@ else:
 
 st.subheader("Q3 — Ratings over release decades")
 st.caption(
-    "Line chart of mean rating by **movie release decade** (not rating year). "
-    f"{df['year'].isna().sum()} ratings with missing year were dropped."
+    "Line chart of mean rating by movie release decade."
 )
 line = (
     alt.Chart(decades)
@@ -229,9 +226,7 @@ st.dataframe(
 
 st.subheader("Q4 — Best movies with a ratings floor")
 st.caption(
-    "Ranked by score = (number of ratings) × (mean rating). "
-    "Ties break on more ratings, then title. All five at floor 50 already have 420+ ratings, "
-    "so raising the assignment floor to 150 does not change this top 5."
+    "Ranked by score = (number of ratings) × (mean rating)."
 )
 col_a, col_b = st.columns(2)
 with col_a:
