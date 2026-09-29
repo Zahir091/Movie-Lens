@@ -188,10 +188,17 @@ st.caption(
 if means_view.empty:
     st.info("None of the filtered genres pass the median movie-count floor.")
 else:
-    st.altair_chart(
-        horizontal_bar(means_view, "genre", "mean_rating", "Mean rating (1–5)", "mean_rating"),
-        use_container_width=True,
+    lollipop_base = alt.Chart(means_view)
+    lollipop_line = lollipop_base.mark_rule().encode(
+        y=alt.Y("genre:N", sort=alt.EncodingSortField(field="mean_rating", order="descending"), title=""),
+        x=alt.X("mean_rating:Q", title="Mean rating (1–5)", scale=alt.Scale(domain=[0, 5])),
     )
+    lollipop_dot = lollipop_base.mark_circle(size=120).encode(
+        y=alt.Y("genre:N", sort=alt.EncodingSortField(field="mean_rating", order="descending"), title=""),
+        x=alt.X("mean_rating:Q", title="Mean rating (1–5)", scale=alt.Scale(domain=[0, 5])),
+        tooltip=["genre", "mean_rating", "n_ratings", "n_movies"],
+    )
+    st.altair_chart((lollipop_line + lollipop_dot).properties(height=max(280, 22 * len(means_view))), use_container_width=True)
     hi = means.iloc[0]
     lo = means.iloc[-1]
     h1, h2 = st.columns(2)
@@ -230,33 +237,35 @@ st.caption(
 col_a, col_b = st.columns(2)
 with col_a:
     st.markdown(f"**Top 5 with at least {min_ratings} ratings** (slider)")
-    chart_now = (
+    scatter_now = (
         alt.Chart(top_now)
-        .mark_bar()
+        .mark_circle(size=150)
         .encode(
-            y=alt.Y("title:N", sort="-x", title=""),
-            x=alt.X("mean:Q", title="Mean rating", scale=alt.Scale(domain=[0, 5])),
+            x=alt.X("n:Q", title="Number of ratings"),
+            y=alt.Y("mean:Q", title="Mean rating", scale=alt.Scale(domain=[0, 5])),
             tooltip=["title", "n", "mean"],
         )
         .properties(height=260)
     )
-    st.altair_chart(chart_now, use_container_width=True)
+    text_now = scatter_now.mark_text(align="left", dx=7, fontSize=11).encode(text="title:N")
+    st.altair_chart((scatter_now + text_now), use_container_width=True)
     show = top_now.copy()
     show["mean"] = show["mean"].round(3)
     st.dataframe(show[["title", "n", "mean"]], hide_index=True, use_container_width=True)
 with col_b:
     st.markdown(f"**Top 5 with at least {compare_floor} ratings**")
-    chart_cmp = (
+    scatter_cmp = (
         alt.Chart(top_compare)
-        .mark_bar()
+        .mark_circle(size=150)
         .encode(
-            y=alt.Y("title:N", sort="-x", title=""),
-            x=alt.X("mean:Q", title="Mean rating", scale=alt.Scale(domain=[0, 5])),
+            x=alt.X("n:Q", title="Number of ratings"),
+            y=alt.Y("mean:Q", title="Mean rating", scale=alt.Scale(domain=[0, 5])),
             tooltip=["title", "n", "mean"],
         )
         .properties(height=260)
     )
-    st.altair_chart(chart_cmp, use_container_width=True)
+    text_cmp = scatter_cmp.mark_text(align="left", dx=7, fontSize=11).encode(text="title:N")
+    st.altair_chart((scatter_cmp + text_cmp), use_container_width=True)
     show2 = top_compare.copy()
     show2["mean"] = show2["mean"].round(3)
     st.dataframe(show2[["title", "n", "mean"]], hide_index=True, use_container_width=True)
