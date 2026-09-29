@@ -165,8 +165,9 @@ c4.metric("Avg genre tags per movie", f"{counts['n_movies'].sum() / n_movies:.2f
 
 st.subheader("Q1 — Genre breakdown")
 st.caption(
-    "Horizontal bars, sorted by movie count. "
-    "Percents are share of unique movies and will not add to 100%."
+    "Not every movie fits neatly into one box — a film can be a Comedy, a Romance, and a Thriller all at once. "
+    "Each genre tag is counted separately, so the percentages here add up to more than 100%. "
+    "This chart shows which genres dominate the catalog and how widely they spread across the rated movies."
 )
 st.altair_chart(
     horizontal_bar(counts_view, "genre", "n_movies", "Unique movies rated", "n_movies"),
@@ -182,16 +183,18 @@ st.dataframe(
 
 st.subheader("Q2 — Genre satisfaction")
 st.caption(
-    f"Mean of all ratings tagged with each genre. Genres with fewer than "
-    f"{median_movies:.0f} movies (the median across genres) are omitted. Sorted by mean."
+    f"Popularity doesn't always mean quality — this chart asks which genres people actually enjoy the most. "
+    f"Each dot represents the average rating across all movies tagged with that genre, with genres below {median_movies:.0f} movies filtered out to keep the comparison fair. "
+    f"The spread between the top and bottom might surprise you."
 )
 if means_view.empty:
     st.info("None of the filtered genres pass the median movie-count floor.")
 else:
     lollipop_base = alt.Chart(means_view)
-    lollipop_line = lollipop_base.mark_rule().encode(
+    lollipop_line = lollipop_base.mark_rule(color="gray").encode(
         y=alt.Y("genre:N", sort=alt.EncodingSortField(field="mean_rating", order="descending"), title=""),
         x=alt.X("mean_rating:Q", title="Mean rating (1–5)", scale=alt.Scale(domain=[0, 5])),
+        x2=alt.X2(value=0),
     )
     lollipop_dot = lollipop_base.mark_circle(size=120).encode(
         y=alt.Y("genre:N", sort=alt.EncodingSortField(field="mean_rating", order="descending"), title=""),
@@ -212,7 +215,9 @@ else:
 
 st.subheader("Q3 — Ratings over release decades")
 st.caption(
-    "Line chart of mean rating by movie release decade."
+    "Does nostalgia inflate older movies, or do newer films rate better with modern audiences? "
+    "This line chart tracks the average rating of movies by the decade they were released — not when they were rated. "
+    "Look for the dips and peaks that tell the story of how taste and quality shifted over time."
 )
 line = (
     alt.Chart(decades)
@@ -232,7 +237,9 @@ st.dataframe(
 
 st.subheader("Q4 — Best movies with a ratings floor")
 st.caption(
-    "Top 5 movies by highest mean rating, filtered by minimum number of ratings."
+    "A 5-star average means nothing if only two people rated it — so this chart sets a minimum ratings floor before crowning any winners. "
+    "Each dot is a movie positioned by how many people rated it and how highly they scored it. "
+    "Raise the floor from 50 to 150 and see if the top 5 holds up or if new contenders emerge."
 )
 col_a, col_b = st.columns(2)
 with col_a:
@@ -247,8 +254,7 @@ with col_a:
         )
         .properties(height=260)
     )
-    text_now = scatter_now.mark_text(align="left", dx=7, fontSize=11).encode(text="title:N")
-    st.altair_chart((scatter_now + text_now), use_container_width=True)
+    st.altair_chart(scatter_now, use_container_width=True)
     show = top_now.copy()
     show["mean"] = show["mean"].round(3)
     st.dataframe(show[["title", "n", "mean"]], hide_index=True, use_container_width=True)
@@ -264,8 +270,7 @@ with col_b:
         )
         .properties(height=260)
     )
-    text_cmp = scatter_cmp.mark_text(align="left", dx=7, fontSize=11).encode(text="title:N")
-    st.altair_chart((scatter_cmp + text_cmp), use_container_width=True)
+    st.altair_chart(scatter_cmp, use_container_width=True)
     show2 = top_compare.copy()
     show2["mean"] = show2["mean"].round(3)
     st.dataframe(show2[["title", "n", "mean"]], hide_index=True, use_container_width=True)
