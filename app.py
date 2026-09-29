@@ -89,8 +89,7 @@ def movie_scores(df: pd.DataFrame) -> pd.DataFrame:
         n=("rating", "size"),
         mean=("rating", "mean"),
     )
-    stats["score"] = stats["n"] * stats["mean"]
-    return stats.sort_values(["score", "n", "title"], ascending=[False, False, True])
+    return stats.sort_values(["mean", "n", "title"], ascending=[False, False, True])
 
 
 def horizontal_bar(data: pd.DataFrame, y: str, x: str, x_title: str, sort_field: str):
@@ -226,48 +225,47 @@ st.dataframe(
 
 st.subheader("Q4 — Best movies with a ratings floor")
 st.caption(
-    "Ranked by score = (number of ratings) × (mean rating)."
+    "Top 5 movies by highest mean rating, filtered by minimum number of ratings."
 )
 col_a, col_b = st.columns(2)
 with col_a:
-    st.markdown(f"**Top 5 with n ≥ {min_ratings}** (slider)")
+    st.markdown(f"**Top 5 with at least {min_ratings} ratings** (slider)")
     chart_now = (
         alt.Chart(top_now)
         .mark_bar()
         .encode(
             y=alt.Y("title:N", sort="-x", title=""),
-            x=alt.X("score:Q", title="n × mean rating"),
-            tooltip=["title", "n", "mean", "score"],
+            x=alt.X("mean:Q", title="Mean rating", scale=alt.Scale(domain=[0, 5])),
+            tooltip=["title", "n", "mean"],
         )
         .properties(height=260)
     )
     st.altair_chart(chart_now, use_container_width=True)
     show = top_now.copy()
     show["mean"] = show["mean"].round(3)
-    st.dataframe(show[["title", "n", "mean", "score"]], hide_index=True, use_container_width=True)
+    st.dataframe(show[["title", "n", "mean"]], hide_index=True, use_container_width=True)
 with col_b:
-    st.markdown(f"**Top 5 with n ≥ {compare_floor}** (assignment compare)")
+    st.markdown(f"**Top 5 with at least {compare_floor} ratings**")
     chart_cmp = (
         alt.Chart(top_compare)
         .mark_bar()
         .encode(
             y=alt.Y("title:N", sort="-x", title=""),
-            x=alt.X("score:Q", title="n × mean rating"),
-            tooltip=["title", "n", "mean", "score"],
+            x=alt.X("mean:Q", title="Mean rating", scale=alt.Scale(domain=[0, 5])),
+            tooltip=["title", "n", "mean"],
         )
         .properties(height=260)
     )
     st.altair_chart(chart_cmp, use_container_width=True)
     show2 = top_compare.copy()
     show2["mean"] = show2["mean"].round(3)
-    st.dataframe(show2[["title", "n", "mean", "score"]], hide_index=True, use_container_width=True)
+    st.dataframe(show2[["title", "n", "mean"]], hide_index=True, use_container_width=True)
 
 now_titles = list(top_now["title"])
 cmp_titles = list(top_compare["title"])
 if now_titles == cmp_titles:
     st.info(
-        f"Same five titles at n ≥ {min_ratings} and n ≥ {compare_floor}. "
-        "The n × mean ranking already prefers high-volume films."
+        f"Same five titles at both floors ({min_ratings} and {compare_floor} minimum ratings)."
     )
 else:
     dropped = [t for t in now_titles if t not in cmp_titles]
